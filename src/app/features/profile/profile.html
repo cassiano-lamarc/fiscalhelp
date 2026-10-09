@@ -1,0 +1,10 @@
+﻿<div class="page-heading"><h1>Dados do usuário</h1></div>
+<form class="panel" [formGroup]="form" (ngSubmit)="save()">
+<p class="muted">Dados opcionais para preencher novos orçamentos. Você escolhe se quer incluí-los em cada documento.</p>
+<label>Telefone de contato<input type="tel" formControlName="contactPhone" maxlength="50" placeholder="+55 11 99999-9999" autocomplete="tel"></label>
+<app-field-error field="contactPhone" [control]="form.controls.contactPhone" />
+<label>Nome padrão de quem prepara o orçamento<input formControlName="preparedByName" maxlength="150" autocomplete="name"></label>
+<app-field-error field="preparedByName" [control]="form.controls.preparedByName" />
+<button mat-flat-button [disabled]="busy()">{{busy()?'Aguarde…':'Salvar dados'}}</button>
+</form>
+@if(api.session() && !api.session()?.hasGoogleLogin){<section class="panel"><h2>Vincular acesso com Google</h2><p>Preserve sua conta e seus documentos vinculando o Google enquanto esta sessão está ativa.</p><button mat-stroked-button (click)="linkGoogle()" [disabled]="busy()">Vincular Google à minha conta</button></section>}

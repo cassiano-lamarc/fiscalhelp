@@ -1,0 +1,5 @@
+{
+  "/api/**": { "target": "https://localhost:7032", "secure": false },
+  "/health/**": { "target": "https://localhost:7032", "secure": false },
+  "/signin-google": { "target": "https://localhost:7032", "secure": false }
+}

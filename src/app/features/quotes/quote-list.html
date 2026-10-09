@@ -1,0 +1,14 @@
+﻿<div class="page-heading"><div><span class="eyebrow">FISCAL HELP</span><h1>Meus orçamentos</h1><p class="muted">Crie, consulte e apresente seus próximos projetos.</p></div>@if(api.session()?.quota?.remaining===0){<button mat-flat-button disabled>Limite gratuito atingido</button>}@else{<a mat-flat-button routerLink="/orcamentos/novo">+ Criar orçamento</a>}</div>
+<p class="info">{{api.session()?.quota?.used}} de {{api.session()?.quota?.limit ?? 'ilimitados'}} orçamentos utilizados. @if(api.session()?.planTier==='Free'){Plano gratuito: até 50 orçamentos por conta. Mais orçamentos estarão disponíveis na versão paga.}</p>
+@if(api.session()?.quota?.remaining===0){<p role="status">Você atingiu o limite de 50 orçamentos do plano gratuito. Seus documentos continuam disponíveis para consulta, edição e download.</p>}
+@if(api.session()?.pdfBranding?.showOriginBranding){<p class="muted">Os PDFs incluem a marca de origem: {{api.session()?.pdfBranding?.text}}.</p>}
+<section class="panel list-panel" [attr.aria-busy]="busy()"><div class="list-title"><h2>Todos os orçamentos</h2><span class="badge">{{count()}} documentos</span></div>
+@if(busy()){<p class="empty" role="status">Carregando orçamentos…</p>}
+@if(failed()){<p role="alert">Não foi possível atualizar esta página.</p><button mat-button (click)="load()">Tentar novamente</button>}
+@if(!busy() && !failed() && !quotes().length){<div class="empty"><h2>Seu próximo projeto começa aqui.</h2><p>Crie seu primeiro orçamento com os dados da sua empresa.</p>@if(api.session()?.quota?.remaining!==0){<a mat-flat-button routerLink="/orcamentos/novo">Criar primeiro orçamento</a>}</div>}
+@else if(quotes().length){
+<div class="table-scroll desktop-history"><table><thead><tr><th>Orçamento</th><th>Emissão</th><th>Cliente</th><th class="numeric">Total</th><th>Ações</th></tr></thead><tbody>@for(q of quotes();track q.id){<tr><td><a [routerLink]="['/orcamentos',q.id]">{{q.number}}</a></td><td [title]="absolute(q)">{{label(q)}}</td><td>{{q.customerName||'Não informado'}}</td><td class="numeric">{{q.total|currency:'BRL'}}</td><td class="row-actions"><a mat-button [routerLink]="['/orcamentos',q.id]">Abrir</a><button mat-button (click)="download(q)">PDF ↓</button></td></tr>}</tbody></table></div>
+<div class="mobile-history">@for(q of quotes();track q.id){<article><a [routerLink]="['/orcamentos',q.id]">{{q.number}}</a><p [title]="absolute(q)">{{label(q)}}</p><p>{{q.customerName||'Cliente não informado'}}</p><strong>{{q.total|currency:'BRL'}}</strong><div><a mat-button [routerLink]="['/orcamentos',q.id]">Abrir</a><button mat-button (click)="download(q)">PDF ↓</button></div></article>}</div>
+}
+<mat-paginator [length]="count()" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[10,25,50]" (page)="changePage($event)" showFirstLastButtons aria-label="Paginação dos orçamentos" />
+</section>
