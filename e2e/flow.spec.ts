@@ -3,6 +3,56 @@ const company={id:'11111111-1111-1111-1111-111111111111',name:'Empresa original'
 function session(used=0,onboardingComplete=true){return {id:'22222222-2222-2222-2222-222222222222',email:'test@example.com',planTier:'Free',quota:{used,limit:50,remaining:Math.max(0,50-used)},pdfBranding:{showOriginBranding:true,text:'Fiscal Help • Criado por cassianolamarc.com.br',url:'https://cassianolamarc.com.br'},hasGoogleLogin:true,onboardingComplete,company};}
 const id='33333333-3333-3333-3333-333333333333';
 const quote={id,number:'ORC-000001',issueDate:'2026-10-09',issuedAtUtc:'2026-10-09T13:52:00Z',customerName:'Cliente',items:[{description:'Serviço',quantity:'2',unitPrice:'100.00',lineTotal:'200.00'}],discountAmount:'0.00',subtotal:'200.00',total:'200.00',version:1,snapshot:{name:'Empresa original'},vehicleName:null,vehicleNumber:null,licensePlate:null,subject:null,validityDays:null,commercialConditions:{includePaymentTerms:false,paymentTerms:null,includeWarranty:false,warrantyTerms:null,includeNotes:false,notes:null},includeContactPhone:false,contactPhone:null,includePreparedByName:false,preparedByName:null};
+test('WhatsApp fallback downloads the PDF with its name and opens only a message', async ({page}) => {
+ await page.addInitScript(() => Object.defineProperty(navigator, 'canShare', {value: undefined, configurable: true}));
+ await mock(page, {session: session(1)});
+ await page.route('**/api/v1/quotes/*/pdf', route => route.fulfill({contentType:'application/pdf', body:'%PDF-1.4 fixture'}));
+ await page.goto('/orcamentos');
+ await page.locator('.desktop-history').getByRole('button', {name:'Compartilhar no WhatsApp'}).click();
+ const dialog = page.locator('dialog[open]');
+ const download = dialog.getByRole('link', {name:'Baixar PDF'});
+ await expect(download).toHaveAttribute('download', 'ORC_0_Empresa original.pdf');
+ const event = page.waitForEvent('download'); await download.click();
+ expect((await event).suggestedFilename()).toBe('ORC_0_Empresa original.pdf');
+ const href = await dialog.getByRole('link', {name:'Abrir WhatsApp'}).getAttribute('href');
+ const url = new URL(href!); expect(url.origin).toBe('https://wa.me');
+ expect(url.searchParams.get('text')).toContain('ORC-000001');
+ expect(href).not.toContain('onrender');
+ await dialog.getByRole('button', {name:'Fechar'}).click(); await expect(dialog).toHaveCount(0);
+ await page.setViewportSize({width:390,height:844});
+ await expect(page.locator('.mobile-history').getByRole('button', {name:'Compartilhar no WhatsApp'})).toBeVisible();
+});
+
+test('WhatsApp native file share saves edits and handles cancellation without errors', async ({page}) => {
+ await page.addInitScript(() => {
+  Object.defineProperty(navigator, 'canShare', {value: (data: ShareData) => !!data.files?.length, configurable:true});
+  Object.defineProperty(navigator, 'share', {value: async (data: ShareData) => {
+   (window as any).shared = {name:data.files![0].name, type:data.files![0].type, size:data.files![0].size, active:navigator.userActivation.isActive};
+   throw new DOMException('Cancelled', 'AbortError');
+  }, configurable:true});
+ });
+ const state = {session:session(1), quote}; await mock(page,state);
+ await page.route('**/api/v1/quotes/*/pdf', route => route.fulfill({contentType:'application/pdf', body:'%PDF-1.4 fixture'}));
+ await page.goto('/orcamentos/'+id);
+ await page.getByLabel('Nome do cliente').fill('Cliente atualizado');
+ await page.getByRole('button', {name:'Compartilhar no WhatsApp'}).click();
+ const dialog = page.locator('dialog[open]');
+ await dialog.getByRole('button', {name:'Compartilhar PDF', exact:true}).click();
+ expect(state.quote.customerName).toBe('Cliente atualizado');
+ expect(await page.evaluate(() => (window as any).shared)).toEqual({name:`ORC_${id}_Empresa original.pdf`,type:'application/pdf',size:16,active:true});
+ await expect(dialog.getByRole('alert')).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Fechar'}).click();
+});
+
+test('WhatsApp PDF failure allows closing and retrying', async ({page}) => {
+ await mock(page,{session:session(1),quote});
+ await page.route('**/api/v1/quotes/*/pdf', route => route.fulfill({status:500}));
+ await page.goto('/orcamentos/'+id);
+ await page.getByRole('button',{name:'Compartilhar no WhatsApp'}).click();
+ await expect(page.locator('dialog[open]').getByRole('alert')).toContainText('Não foi possível preparar');
+ await page.locator('dialog[open]').getByRole('button',{name:'Fechar'}).click();
+ await expect(page.getByRole('button',{name:'Compartilhar no WhatsApp'})).toBeEnabled();
+});
 async function mock(page:Page,state:{session:any;quote?:any;profile?:any;delay?:number;requests?:string[];jwt?:boolean}){
  await page.route('**/api/v1/**',async route=>{
   const req=route.request(),url=new URL(req.url()),path=url.pathname.replace('/api/v1','');state.requests?.push(path);

@@ -1,3 +1,5 @@
+import { WhatsappShare } from '../../shared/whatsapp-share';
+import { quotePdfFilename } from '../../shared/quote-pdf-filename';
 ﻿import { Component, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -8,7 +10,7 @@ import { debounceTime, Subscription } from 'rxjs';
 import { ApiService, Quote, QuoteInput, UserProfile } from '../../core/http/api.service';
 import { FieldError } from '../../shared/field-error';
 
-@Component({selector:'app-quote-editor',imports:[ReactiveFormsModule,RouterLink,CurrencyPipe,MatButtonModule,FieldError],templateUrl:'./quote-editor.html',styleUrl:'./quote-editor.scss'})
+@Component({selector:'app-quote-editor',imports:[WhatsappShare,ReactiveFormsModule,RouterLink,CurrencyPipe,MatButtonModule,FieldError],templateUrl:'./quote-editor.html',styleUrl:'./quote-editor.scss'})
 export class QuoteEditor implements OnInit,OnDestroy {
   api=inject(ApiService);private fb=inject(FormBuilder);private route=inject(ActivatedRoute);private sanitizer=inject(DomSanitizer);
   saved=signal<Quote|null>(null);calculated=signal<Quote|null>(null);busy=signal(true);calcError=signal('');preview=signal<SafeResourceUrl|null>(null);
@@ -77,7 +79,8 @@ export class QuoteEditor implements OnInit,OnDestroy {
       this.saved.set(q);this.calculated.set(q);this.form.markAsPristine();this.calcError.set('');await this.api.loadSession();this.api.notice.set('Orçamento salvo.');return q;
     }catch{return null;}finally{this.busy.set(false);}
   }
-  async pdf(download:boolean){const q=this.form.dirty||!this.saved()?await this.save():this.saved();if(!q)return;this.busy.set(true);try{const blob=await this.api.pdf(q.id);if(download){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='orcamento-'+q.number+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}else{if(this.previewUrl)URL.revokeObjectURL(this.previewUrl);this.previewUrl=URL.createObjectURL(blob);this.preview.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.previewUrl));}}catch{this.api.error.set('Não foi possível gerar o PDF. Tente novamente.');}finally{this.busy.set(false);}}
+  async pdf(download:boolean){const q=this.form.dirty||!this.saved()?await this.save():this.saved();if(!q)return;this.busy.set(true);try{const blob=await this.api.pdf(q.id);if(download){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=quotePdfFilename(q);a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}else{if(this.previewUrl)URL.revokeObjectURL(this.previewUrl);this.previewUrl=URL.createObjectURL(blob);this.preview.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.previewUrl));}}catch{this.api.error.set('Não foi possível gerar o PDF. Tente novamente.');}finally{this.busy.set(false);}}
+  prepareShare = async (): Promise<Quote | null> => this.form.dirty || !this.saved() ? await this.save() : this.saved();
   hasChanges(){return this.form.dirty;}
   @HostListener('window:beforeunload',['$event']) beforeUnload(event:BeforeUnloadEvent){if(this.hasChanges()){event.preventDefault();event.returnValue='';}}
   ngOnDestroy(){this.subscriptions.unsubscribe();if(this.previewUrl)URL.revokeObjectURL(this.previewUrl);}
