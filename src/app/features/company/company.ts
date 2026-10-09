@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal, effect, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -14,6 +14,16 @@ export class Company implements OnInit {
   company=signal<CompanyModel|null>(null);busy=signal(true);review=signal(false);selected=signal(false);logo=signal<string|null>(null);
   form=this.fb.nonNullable.group({name:['',[Validators.required,Validators.minLength(2),Validators.maxLength(150)]],cnpj:['',cnpjValidator],showHeaderLogo:[true],showWatermark:[true]});
   get confirmed(){return !!this.company()?.confirmedAtUtc;}
+  logoPreview = signal<string|null>(null);
+  constructor() {
+    effect(() => { const id=this.logo(); untracked(() => { void this.loadLogo(id); }); });
+    this.destroyRef.onDestroy(() => { const url=this.logoPreview(); if(url) URL.revokeObjectURL(url); });
+  }
+  private async loadLogo(id:string|null) {
+    const previous=this.logoPreview();if(previous)URL.revokeObjectURL(previous);this.logoPreview.set(null);
+    if(!id)return;
+    try { const blob=await this.api.asset(id); if(this.logo()===id)this.logoPreview.set(URL.createObjectURL(blob)); } catch {}
+  }
   async ngOnInit(){this.api.fieldErrors.set({});this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(()=>this.api.fieldErrors.set({}));try{const c=await this.api.request<CompanyModel|null>('GET','/company');this.apply(c);this.selected.set(!!c);}catch{}finally{this.busy.set(false);}}
   apply(c:CompanyModel|null){this.company.set(c);if(c){this.form.patchValue({name:c.name,cnpj:c.cnpj||'',showHeaderLogo:c.showHeaderLogo,showWatermark:c.showWatermark});this.logo.set(c.logoAssetId);}this.form.markAsPristine();}
   hasChanges(){return this.form.dirty;}

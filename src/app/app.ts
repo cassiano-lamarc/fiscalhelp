@@ -13,5 +13,5 @@ export class App {
   api = inject(ApiService);
   router = inject(Router);
   constructor() { void this.api.loadSession(); }
-  async logout() { try { await this.api.request('POST','/auth/logout'); this.api.session.set(null); await this.api.csrf(); await this.router.navigate(['/']); } catch {} }
+  async logout() { try { await this.api.request('POST','/auth/logout'); this.api.jwt.clear(); this.api.session.set(null); await this.api.csrf(); await this.router.navigate(['/']); } catch {} }
 }

@@ -19,11 +19,12 @@ export class Auth implements OnInit {
     } catch { this.message.set('Não foi possível consultar o acesso. Recarregue a página para tentar novamente.'); }
     finally { this.loading.set(false); }
   }
-  continue() {
+  async continue() {
     if (this.busy()) return;
     this.busy.set(true);
     const value = this.route.snapshot.queryParamMap.get('returnUrl');
     const destination = value && /^\/(orcamentos(?:\/(?:novo|[a-f0-9-]{36}))?|empresa|dados-usuario)$/.test(value) ? value : '/orcamentos';
-    window.location.assign(this.api.url('/auth/google/start?returnUrl=' + encodeURIComponent(destination) + '&frontendOrigin=' + encodeURIComponent(window.location.origin)));
+    try { await this.api.beginGoogleLogin(destination, this.route.snapshot.queryParamMap.get('migrationTicket')); }
+    catch { this.busy.set(false); this.message.set('Não foi possível iniciar o login. Tente novamente.'); }
   }
 }

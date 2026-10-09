@@ -4,6 +4,7 @@ import { firstValueFrom, catchError, throwError } from 'rxjs';
 import { NotificationService } from './notification.service';
 import { Router } from '@angular/router';
 import { API_URL } from './api.config';
+import { JwtSession } from '../auth/jwt-session';
 
 export interface Company {
   id: string;
@@ -81,6 +82,14 @@ export interface UserProfile { contactPhone: string | null; preparedByName: stri
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  readonly jwt = inject(JwtSession);
+  loginReturnUrl = '/orcamentos';
+  async beginGoogleLogin(destination:string, migrationTicket:string|null = null) {
+    const codeChallenge = await this.jwt.beginProof();
+    const start = migrationTicket ? '/auth/google/migrate/start?ticket=' + encodeURIComponent(migrationTicket) : '/auth/google/start?returnUrl=' + encodeURIComponent(destination);
+    window.location.assign(this.url(start
+      + '&frontendOrigin=' + encodeURIComponent(window.location.origin) + '&codeChallenge=' + codeChallenge));
+  }
   readonly baseUrl = API_URL;
   private csrfToken = '';
   url(path: string) { return this.baseUrl + path; }
@@ -96,7 +105,7 @@ export class ApiService {
   async request<T>(method: string, path: string, body?: unknown, key?: string): Promise<T> {
     let headers = new HttpHeaders();
     if (key) headers = headers.set('Idempotency-Key', key);
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+    if (!this.jwt.accessToken() && !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
       if (!this.csrfToken) await this.csrf();
       headers = headers.set('X-XSRF-TOKEN', this.csrfToken);
     }
@@ -133,13 +142,27 @@ export class ApiService {
   }
   private async resolveSession() {
     try {
+      if (window.location.pathname === '/auth/callback') {
+        const code = new URLSearchParams(window.location.hash.slice(1)).get('code');
+        const verifier = this.jwt.verifier();
+        if (code) {
+          history.replaceState(null, '', window.location.pathname);
+          if (!verifier) throw new Error('Login proof missing');
+          try {
+            const result = await firstValueFrom(this.http.post<{accessToken:string;expiresAtUtc:string;returnUrl:string}>(
+              this.url('/auth/token'), {code,codeVerifier:verifier}, {withCredentials:false}));
+            this.jwt.save(result.accessToken,result.expiresAtUtc);
+            this.loginReturnUrl = /^\/(orcamentos(?:\/(?:novo|[a-fA-F0-9-]{36}))?|empresa|dados-usuario)$/.test(result.returnUrl) ? result.returnUrl : '/orcamentos';
+          } finally { this.jwt.clearProof(); }
+        }
+      }
       this.session.set(
         await firstValueFrom(this.http.get<Session>(this.url('/me'), { withCredentials: true })),
       );
     } catch {
       this.session.set(null);
     }
-    try { await this.csrf(); } catch {} finally { this.sessionResolved.set(true); }
+    try { if (!this.jwt.accessToken()) await this.csrf(); } catch {} finally { this.sessionResolved.set(true); }
     return this.session();
   }
   async pdf(id: string) {
@@ -152,6 +175,9 @@ export class ApiService {
         return throwError(()=>error);
       })),
     );
+  }
+  async asset(id:string) {
+    return firstValueFrom(this.http.get(this.url('/assets/'+id), {responseType:'blob',withCredentials:true}));
   }
   listQuotes(pageIndex:number, pageSize:number) {
     return this.http.get<{items:Quote[];totalCount:number;page:number;pageSize:number}>(

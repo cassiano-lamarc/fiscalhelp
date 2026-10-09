@@ -23,7 +23,7 @@ npm start
 
 Interface local: http://localhost:4200. Em desenvolvimento e produção, o frontend usa sempre https://fiscalhelp-backend.onrender.com. A URL fica em `src/app/core/http/api.config.ts`; não há substituição por ambiente. O proxy local também aponta para esse endereço.
 
-O backend publicado deve permitir CORS com credenciais para `http://localhost:4200` e para a origem do frontend de produção, incluindo os headers `X-XSRF-TOKEN` e `Idempotency-Key`. Cookies de sessão e antiforgery precisam ser compatíveis com chamadas entre sites (`SameSite=None; Secure`), sujeitos às regras do navegador. Configure o callback Google `https://fiscalhelp-backend.onrender.com/signin-google` e `PublicUrl` no backend para a origem do frontend desejada.
+O backend publicado deve permitir CORS para `http://localhost:4200` e para a origem do frontend de produção, incluindo os headers `Authorization`, `X-XSRF-TOKEN` e `Idempotency-Key`. Novos logins usam JWT emitido pela API após validar o Google. O frontend gera uma prova PKCE, troca o código de uso único em `/auth/callback` por JWT, guarda o token no `sessionStorage` da aba e envia `Authorization: Bearer` nas chamadas à API, PDFs e logos, sem cookies de terceiros. O token é removido no logout, expiração ou resposta 401. Sessões legadas por cookie continuam exigindo CSRF. Configure `Jwt__SigningKey`, o callback Google `https://fiscalhelp-backend.onrender.com/signin-google` e `PublicUrl` no backend. Publique as alterações de ambos os repositórios juntas.
 
 ```powershell
 npm run build

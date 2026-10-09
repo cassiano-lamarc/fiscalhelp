@@ -1,6 +1,7 @@
 ﻿import { Routes } from '@angular/router';
 import { guestGuard, sessionGuard, onboardingGuard, dirtyGuard } from './core/auth/guards';
 export const routes: Routes = [
+  {path:'auth/callback',title:'Fiscal Help — Concluindo login',loadComponent:()=>import('./features/auth/auth-callback').then(m=>m.AuthCallback)},
   {path:'',title:'Fiscal Help — Orçamentos profissionais',loadComponent:()=>import('./features/home/home').then(m=>m.Home)},
   ...['entrar','criar-conta','login','register'].map(path=>({path,title:'Fiscal Help — Continuar com Google',canActivate:[guestGuard],loadComponent:()=>import('./features/auth/auth').then(m=>m.Auth)})),
   ...['recuperar','verificar','redefinir','telefone'].map(path=>({path,redirectTo:'entrar'})),

@@ -1,10 +1,12 @@
 ﻿# API Fiscal Help V1
 
-OpenAPI atualizado em `/openapi/v1.json` nos ambientes Development/Testing. Prefixo de aplicação `/api/v1`. Cookie HttpOnly; mutações exigem `X-XSRF-TOKEN` obtido em `GET /auth/csrf`. Nunca enviar UserId, plano, quota, IssuedAtUtc ou totais calculados.
+OpenAPI atualizado em `/openapi/v1.json` nos ambientes Development/Testing. Prefixo de aplicação `/api/v1`. Novas sessões Google usam `Authorization: Bearer <JWT da API>`, inclusive em PDFs e assets, sem cookies de terceiros. Sessões legadas por cookie HttpOnly exigem `X-XSRF-TOKEN` nas mutações, obtido em `GET /auth/csrf`. Nunca enviar UserId, plano, quota, IssuedAtUtc ou totais calculados.
 
 | Rota | Contrato |
 | --- | --- |
-| GET /auth/google/start?returnUrl=/orcamentos | Challenge OAuth Google; retorno limitado a rotas internas |
+| GET /auth/google/start?returnUrl=/orcamentos&frontendOrigin=ORIGEM&codeChallenge=PKCE_S256 | Challenge OAuth Google; prova PKCE obrigatória, origem autorizada e retorno limitado a rotas internas |
+| POST /auth/token | JSON `{code, codeVerifier}`; troca código de uso único por `{accessToken, tokenType, expiresAtUtc, returnUrl}`; código expira em dois minutos, resposta sem cache |
+| POST /auth/google/link/start | Autenticado; JSON `{codeChallenge, frontendOrigin}`; retorna `authorizationUrl` para navegação e vinculação segura |
 | POST /auth/logout | Encerra/revoga sessão |
 | GET /me | Sessão, onboarding, empresa, planTier, quota, pdfBranding e hasGoogleLogin |
 | GET /me/profile | contactPhone, preparedByName e version |

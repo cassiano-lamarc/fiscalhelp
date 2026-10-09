@@ -3,15 +3,18 @@ const company={id:'11111111-1111-1111-1111-111111111111',name:'Empresa original'
 function session(used=0,onboardingComplete=true){return {id:'22222222-2222-2222-2222-222222222222',email:'test@example.com',planTier:'Free',quota:{used,limit:50,remaining:Math.max(0,50-used)},pdfBranding:{showOriginBranding:true,text:'Fiscal Help • Criado por cassianolamarc.com.br',url:'https://cassianolamarc.com.br'},hasGoogleLogin:true,onboardingComplete,company};}
 const id='33333333-3333-3333-3333-333333333333';
 const quote={id,number:'ORC-000001',issueDate:'2026-10-09',issuedAtUtc:'2026-10-09T13:52:00Z',customerName:'Cliente',items:[{description:'Serviço',quantity:'2',unitPrice:'100.00',lineTotal:'200.00'}],discountAmount:'0.00',subtotal:'200.00',total:'200.00',version:1,snapshot:{name:'Empresa original'},vehicleName:null,vehicleNumber:null,licensePlate:null,subject:null,validityDays:null,commercialConditions:{includePaymentTerms:false,paymentTerms:null,includeWarranty:false,warrantyTerms:null,includeNotes:false,notes:null},includeContactPhone:false,contactPhone:null,includePreparedByName:false,preparedByName:null};
-async function mock(page:Page,state:{session:any;quote?:any;profile?:any;delay?:number;requests?:string[]}){
+async function mock(page:Page,state:{session:any;quote?:any;profile?:any;delay?:number;requests?:string[];jwt?:boolean}){
  await page.route('**/api/v1/**',async route=>{
   const req=route.request(),url=new URL(req.url()),path=url.pathname.replace('/api/v1','');state.requests?.push(path);
   expect(url.origin).toBe('https://fiscalhelp-backend.onrender.com');
-  if (!['GET','HEAD','OPTIONS'].includes(req.method())) expect(req.headers()['x-xsrf-token']).toBe('test-token');
+  if(state.jwt){expect(req.headers()['authorization']).toBe('Bearer fixture.jwt.token');expect(req.headers()['cookie']).toBeUndefined();}
+  if (!state.jwt && !['GET','HEAD','OPTIONS'].includes(req.method())) expect(req.headers()['x-xsrf-token']).toBe('test-token');
   const respond=(body:any,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   if(path==='/me'){if(state.delay)await new Promise(r=>setTimeout(r,state.delay));return respond(state.session||{},state.session?200:401);}
   if(path==='/auth/csrf')return respond({token:'test-token'});
   if(path==='/auth/providers')return respond({google:true});
+  if(path==='/auth/logout'){state.session=null;state.jwt=false;return route.fulfill({status:204});}
+  if(path.startsWith('/assets/'))return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j/p8AAAAASUVORK5CYII=','base64')});
   if(path==='/me/profile'){if(req.method()==='PATCH'){const body=req.postDataJSON();state.profile={...body,version:body.version+1};}return respond(state.profile||{contactPhone:'+12025550123',preparedByName:'Preparador',version:1});}
   if(path==='/company'){if(req.method()==='PUT'){const body=req.postDataJSON();state.session.company={...company,...body,version:body.version+1};}return respond(state.session.company);}
   if(path==='/quotes'&&req.method()==='GET'){
@@ -84,4 +87,39 @@ test('Google navigation works without provider availability lookup', async ({pag
  expect(url.origin).toBe('https://fiscalhelp-backend.onrender.com');
  expect(url.searchParams.get('frontendOrigin')).toBe(origin);
  expect(url.searchParams.get('returnUrl')).toBe('/orcamentos');
+});
+
+test('JWT callback exchanges code, persists per tab and authenticates writes and logo without cookies',async({page,context})=>{
+ await page.addInitScript(()=>sessionStorage.setItem('fiscalhelp.login-proof','v'.repeat(64)));
+ await context.addCookies([{name:'orcefacil.session',value:'legacy-cookie',domain:'fiscalhelp-backend.onrender.com',path:'/',secure:true,sameSite:'None'}]);
+ const state={session:{...session(),company:{...company,logoAssetId:'fixture-logo'}},jwt:true,requests:[] as string[]};
+ await mock(page,state);
+ let exchanges=0;
+ await page.route('**/api/v1/auth/token',async route=>{
+  exchanges++;
+  expect(route.request().postDataJSON()).toEqual({code:'c'.repeat(43),codeVerifier:'v'.repeat(64)});
+  expect(route.request().headers()['x-xsrf-token']).toBeUndefined();
+  await route.fulfill({contentType:'application/json',body:JSON.stringify({accessToken:'fixture.jwt.token',expiresAtUtc:'2100-01-01T00:00:00Z',returnUrl:'/dados-usuario'})});
+ });
+ await page.goto('/auth/callback#code='+'c'.repeat(43));
+ await expect(page).toHaveURL(url=>url.pathname==='/dados-usuario');
+ await page.getByLabel('Nome padrão de quem prepara o orçamento').fill('JWT preparador');
+ await page.getByRole('button',{name:'Salvar dados'}).click();
+ await expect(page.getByText('Dados do usuário salvos.')).toBeVisible();
+ expect(await page.evaluate(()=>sessionStorage.getItem('fiscalhelp.login-proof'))).toBeNull();
+ await page.reload();await expect(page.getByRole('heading',{name:'Dados do usuário'})).toBeVisible();
+ expect(exchanges).toBe(1);
+ await page.getByRole('link',{name:'Minha empresa'}).click();
+ await expect(page.getByAltText('Logo da empresa')).toHaveAttribute('src',/^blob:/);
+ expect(state.requests.some(p=>p.startsWith('/assets/'))).toBeTruthy();
+ await page.getByRole('button',{name:'Sair'}).click();await expect(page.getByRole('link',{name:'Entrar',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>sessionStorage.getItem('fiscalhelp.jwt'))).toBeNull();
+});
+
+test('Expired JWT is removed before requesting the API',async({page})=>{
+ await page.addInitScript(()=>sessionStorage.setItem('fiscalhelp.jwt',JSON.stringify({accessToken:'expired',expiresAtUtc:'2000-01-01T00:00:00Z'})));
+ await mock(page,{session:null});
+ await page.route('**/api/v1/me',route=>{expect(route.request().headers()['authorization']).toBeUndefined();return route.fulfill({status:401,contentType:'application/json',body:'{}'});});
+ await page.goto('/orcamentos');await expect(page).toHaveURL(url=>url.pathname==='/entrar');
+ expect(await page.evaluate(()=>sessionStorage.getItem('fiscalhelp.jwt'))).toBeNull();
 });
