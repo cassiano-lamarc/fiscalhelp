@@ -1,5 +1,5 @@
 {
-  "/api/**": { "target": "https://localhost:7032", "secure": false },
-  "/health/**": { "target": "https://localhost:7032", "secure": false },
-  "/signin-google": { "target": "https://localhost:7032", "secure": false }
+  "/api/**": { "target": "https://fiscalhelp-backend.onrender.com", "secure": true, "changeOrigin": true },
+  "/health/**": { "target": "https://fiscalhelp-backend.onrender.com", "secure": true, "changeOrigin": true },
+  "/signin-google": { "target": "https://fiscalhelp-backend.onrender.com", "secure": true, "changeOrigin": true }
 }

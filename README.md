@@ -7,7 +7,9 @@ npm ci
 npm start
 ```
 
-Interface: http://localhost:4200. O proxy em `proxy.conf.json` encaminha `/api`, `/health` e `/signin-google` à API https://localhost:7032. Execute o backend separadamente.
+Interface local: http://localhost:4200. Em desenvolvimento e produção, o frontend usa sempre https://fiscalhelp-backend.onrender.com. A URL fica em `src/app/core/http/api.config.ts`; não há substituição por ambiente. O proxy local também aponta para esse endereço.
+
+O backend publicado deve permitir CORS com credenciais para `http://localhost:4200` e para a origem do frontend de produção, incluindo os headers `X-XSRF-TOKEN` e `Idempotency-Key`. Cookies de sessão e antiforgery precisam ser compatíveis com chamadas entre sites (`SameSite=None; Secure`), sujeitos às regras do navegador. Configure o callback Google `https://fiscalhelp-backend.onrender.com/signin-google` e `PublicUrl` no backend para a origem do frontend desejada.
 
 ```powershell
 npm run build

@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { firstValueFrom, catchError, throwError } from 'rxjs';
 import { NotificationService } from './notification.service';
 import { Router } from '@angular/router';
+import { API_URL } from './api.config';
 
 export interface Company {
   id: string;
@@ -80,6 +81,9 @@ export interface UserProfile { contactPhone: string | null; preparedByName: stri
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  readonly baseUrl = API_URL;
+  private csrfToken = '';
+  url(path: string) { return this.baseUrl + path; }
   private http = inject(HttpClient);
   private notifications = inject(NotificationService);
   private router = inject(Router);
@@ -90,10 +94,15 @@ export class ApiService {
   error = signal('');
   notice = signal('');
   async request<T>(method: string, path: string, body?: unknown, key?: string): Promise<T> {
-    const headers = key ? new HttpHeaders({ 'Idempotency-Key': key }) : undefined;
+    let headers = new HttpHeaders();
+    if (key) headers = headers.set('Idempotency-Key', key);
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+      if (!this.csrfToken) await this.csrf();
+      headers = headers.set('X-XSRF-TOKEN', this.csrfToken);
+    }
     try {
       return await firstValueFrom(
-        this.http.request<T>(method, '/api/v1' + path, { body, headers, withCredentials: true }),
+        this.http.request<T>(method, this.url(path), { body, headers, withCredentials: true }),
       );
     } catch (error) {
       const e = error as HttpErrorResponse;
@@ -113,7 +122,9 @@ export class ApiService {
     }
   }
   async csrf() {
-    await this.request('GET', '/auth/csrf');
+    const response = await this.request<{token: string}>('GET', '/auth/csrf');
+    this.csrfToken = response.token;
+    return response.token;
   }
   async loadSession() {
     if (this.pendingSession) return this.pendingSession;
@@ -123,7 +134,7 @@ export class ApiService {
   private async resolveSession() {
     try {
       this.session.set(
-        await firstValueFrom(this.http.get<Session>('/api/v1/me', { withCredentials: true })),
+        await firstValueFrom(this.http.get<Session>(this.url('/me'), { withCredentials: true })),
       );
     } catch {
       this.session.set(null);
@@ -133,7 +144,7 @@ export class ApiService {
   }
   async pdf(id: string) {
     return firstValueFrom(
-      this.http.get('/api/v1/quotes/' + id + '/pdf', {
+      this.http.get(this.url('/quotes/' + id + '/pdf'), {
         responseType: 'blob',
         withCredentials: true,
       }).pipe(catchError(error => {
@@ -144,7 +155,7 @@ export class ApiService {
   }
   listQuotes(pageIndex:number, pageSize:number) {
     return this.http.get<{items:Quote[];totalCount:number;page:number;pageSize:number}>(
-      '/api/v1/quotes', {params:{page:pageIndex+1,pageSize},withCredentials:true},
+      this.url('/quotes'), {params:{page:pageIndex+1,pageSize},withCredentials:true},
     ).pipe(catchError(error => { this.error.set('Não foi possível carregar os orçamentos. Tente novamente.'); if(error.status===401){this.session.set(null);void this.router.navigate(['/entrar'],{replaceUrl:true});}return throwError(()=>error); }));
   }
   constructor() {

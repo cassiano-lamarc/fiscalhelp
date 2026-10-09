@@ -6,6 +6,8 @@ const quote={id,number:'ORC-000001',issueDate:'2026-10-09',issuedAtUtc:'2026-10-
 async function mock(page:Page,state:{session:any;quote?:any;profile?:any;delay?:number;requests?:string[]}){
  await page.route('**/api/v1/**',async route=>{
   const req=route.request(),url=new URL(req.url()),path=url.pathname.replace('/api/v1','');state.requests?.push(path);
+  expect(url.origin).toBe('https://fiscalhelp-backend.onrender.com');
+  if (!['GET','HEAD','OPTIONS'].includes(req.method())) expect(req.headers()['x-xsrf-token']).toBe('test-token');
   const respond=(body:any,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   if(path==='/me'){if(state.delay)await new Promise(r=>setTimeout(r,state.delay));return respond(state.session||{},state.session?200:401);}
   if(path==='/auth/csrf')return respond({token:'test-token'});

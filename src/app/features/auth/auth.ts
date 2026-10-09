@@ -27,6 +27,6 @@ export class Auth implements OnInit {
     this.busy.set(true);
     const value = this.route.snapshot.queryParamMap.get('returnUrl');
     const destination = value && /^\/(orcamentos(?:\/(?:novo|[a-f0-9-]{36}))?|empresa|dados-usuario)$/.test(value) ? value : '/orcamentos';
-    window.location.assign('/api/v1/auth/google/start?returnUrl=' + encodeURIComponent(destination));
+    window.location.assign(this.api.url('/auth/google/start?returnUrl=' + encodeURIComponent(destination)));
   }
 }
