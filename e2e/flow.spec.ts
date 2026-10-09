@@ -11,9 +11,9 @@ test('WhatsApp fallback downloads the PDF with its name and opens only a message
  await page.locator('.desktop-history').getByRole('button', {name:'Compartilhar no WhatsApp'}).click();
  const dialog = page.locator('dialog[open]');
  const download = dialog.getByRole('link', {name:'Baixar PDF'});
- await expect(download).toHaveAttribute('download', 'ORC_0_Empresa original.pdf');
+ await expect(download).toHaveAttribute('download', 'orc_Cliente_ORC-000001.pdf');
  const event = page.waitForEvent('download'); await download.click();
- expect((await event).suggestedFilename()).toBe('ORC_0_Empresa original.pdf');
+ expect((await event).suggestedFilename()).toBe('orc_Cliente_ORC-000001.pdf');
  const href = await dialog.getByRole('link', {name:'Abrir WhatsApp'}).getAttribute('href');
  const url = new URL(href!); expect(url.origin).toBe('https://wa.me');
  expect(url.searchParams.get('text')).toContain('ORC-000001');
@@ -39,7 +39,7 @@ test('WhatsApp native file share saves edits and handles cancellation without er
  const dialog = page.locator('dialog[open]');
  await dialog.getByRole('button', {name:'Compartilhar PDF', exact:true}).click();
  expect(state.quote.customerName).toBe('Cliente atualizado');
- expect(await page.evaluate(() => (window as any).shared)).toEqual({name:`ORC_${id}_Empresa original.pdf`,type:'application/pdf',size:16,active:true});
+ expect(await page.evaluate(() => (window as any).shared)).toEqual({name:'orc_Cliente atualizado_ORC-000001.pdf',type:'application/pdf',size:16,active:true});
  await expect(dialog.getByRole('alert')).toHaveCount(0);
  await dialog.getByRole('button',{name:'Fechar'}).click();
 });
