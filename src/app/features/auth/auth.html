@@ -8,7 +8,6 @@
       <img src="google-g.png" alt="" width="20" height="20">
       <span>{{busy()?'Aguarde…':'Continuar com Google'}}</span>
     </button>
-    @if(!available()) { <p role="status">O acesso com Google ainda não está configurado.</p> }
     @if(message()) { <p class="validation" role="alert">{{message()}}</p> }
   }
   <p class="info">Plano gratuito: até 50 orçamentos por conta. Mais orçamentos estarão disponíveis na versão paga. Sem cartão.</p>

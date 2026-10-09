@@ -9,11 +9,9 @@ export class Auth implements OnInit {
   private route = inject(ActivatedRoute);
   loading = signal(true);
   busy = signal(false);
-  available = signal(false);
   message = signal('');
   async ngOnInit() {
     try {
-      this.available.set(true);
       const error = this.route.snapshot.queryParamMap.get('erro');
       if (error) this.message.set(error === 'migracao'
         ? 'Esta conta foi criada com outro método. Solicite a vinculação segura ao Google para preservar seus documentos.'

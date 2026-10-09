@@ -65,7 +65,23 @@ test('CTA mantém contraste e foco no celular',async({page})=>{
  const contrast=async()=>button.evaluate(element=>{const style=getComputedStyle(element);const rgb=(value:string)=>value.match(/[\d.]+/g)!.slice(0,3).map(Number);const luminance=(c:number[])=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);const a=luminance(rgb(style.color)),b=luminance(rgb(style.backgroundColor));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);});
  expect(await contrast()).toBeGreaterThanOrEqual(4.5);await button.hover();expect(await contrast()).toBeGreaterThanOrEqual(4.5);await button.focus();await expect(button).toBeFocused();expect(await contrast()).toBeGreaterThanOrEqual(4.5);
  await page.route('**/api/v1/auth/providers',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({google:false})}));await page.goto('/entrar');
- const disabled=page.locator('.google-button');await expect(disabled).toBeDisabled();
- const ratio=await disabled.evaluate(element=>{const style=getComputedStyle(element),opacity=Number(style.opacity);const rgb=(value:string)=>value.match(/[\d.]+/g)!.slice(0,3).map(Number);const background=rgb(style.backgroundColor),foreground=rgb(style.color).map((v,i)=>v*opacity+255*(1-opacity));const luminance=(c:number[])=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);return (luminance(background)+.05)/(luminance(foreground)+.05);});expect(ratio).toBeGreaterThanOrEqual(4.5);
+  const availableButton=page.locator('.google-button');await expect(availableButton).toBeEnabled();
+ const ratio=await availableButton.evaluate(element=>{const style=getComputedStyle(element),opacity=Number(style.opacity);const rgb=(value:string)=>value.match(/[\d.]+/g)!.slice(0,3).map(Number);const background=rgb(style.backgroundColor),foreground=rgb(style.color).map((v,i)=>v*opacity+255*(1-opacity));const luminance=(c:number[])=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);return (luminance(background)+.05)/(luminance(foreground)+.05);});expect(ratio).toBeGreaterThanOrEqual(4.5);
 
+});
+
+test('Google navigation works without provider availability lookup', async ({page}) => {
+ await mock(page, {session:null});
+ await page.route('**/api/v1/auth/providers', route => route.fulfill({status:503,body:'Unavailable'}));
+ await page.route('**/api/v1/auth/google/start?**', route => route.fulfill({contentType:'text/html',body:'Google redirect fixture'}));
+ await page.goto('/entrar');
+ const origin = new URL(page.url()).origin;
+ const button = page.getByRole('button',{name:'Continuar com Google'});
+ await expect(button).toBeEnabled();
+ const request = page.waitForRequest(req => new URL(req.url()).pathname === '/api/v1/auth/google/start');
+ await button.click();
+ const url = new URL((await request).url());
+ expect(url.origin).toBe('https://fiscalhelp-backend.onrender.com');
+ expect(url.searchParams.get('frontendOrigin')).toBe(origin);
+ expect(url.searchParams.get('returnUrl')).toBe('/orcamentos');
 });
