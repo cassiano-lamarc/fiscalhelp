@@ -13,8 +13,7 @@ export class Auth implements OnInit {
   message = signal('');
   async ngOnInit() {
     try {
-      const providers = await this.api.request<{google:boolean}>('GET','/auth/providers');
-      this.available.set(providers.google);
+      this.available.set(true);
       const error = this.route.snapshot.queryParamMap.get('erro');
       if (error) this.message.set(error === 'migracao'
         ? 'Esta conta foi criada com outro método. Solicite a vinculação segura ao Google para preservar seus documentos.'
@@ -23,10 +22,10 @@ export class Auth implements OnInit {
     finally { this.loading.set(false); }
   }
   continue() {
-    if (this.busy() || !this.available()) return;
+    if (this.busy()) return;
     this.busy.set(true);
     const value = this.route.snapshot.queryParamMap.get('returnUrl');
     const destination = value && /^\/(orcamentos(?:\/(?:novo|[a-f0-9-]{36}))?|empresa|dados-usuario)$/.test(value) ? value : '/orcamentos';
-    window.location.assign(this.api.url('/auth/google/start?returnUrl=' + encodeURIComponent(destination)));
+    window.location.assign(this.api.url('/auth/google/start?returnUrl=' + encodeURIComponent(destination) + '&frontendOrigin=' + encodeURIComponent(window.location.origin)));
   }
 }

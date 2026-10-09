@@ -4,7 +4,7 @@
   <p class="muted">Entre ou crie sua conta com Google para organizar seus orçamentos.</p>
   @if(loading()) { <mat-spinner diameter="32" aria-label="Consultando acesso" /> }
   @else {
-    <button class="google-button" (click)="continue()" [disabled]="busy() || !available()">
+    <button class="google-button" (click)="continue()" [disabled]="busy()">
       <img src="google-g.png" alt="" width="20" height="20">
       <span>{{busy()?'Aguarde…':'Continuar com Google'}}</span>
     </button>
