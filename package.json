@@ -8,7 +8,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:dates": "node tests/emission-time.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "preview:cloudflare": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:check": "npm run build && wrangler deploy --dry-run"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
@@ -30,6 +33,7 @@
     "@angular/compiler-cli": "^21.2.0",
     "@playwright/test": "^1.64.0",
     "prettier": "^3.8.1",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "wrangler": "^4.149.0"
   }
 }

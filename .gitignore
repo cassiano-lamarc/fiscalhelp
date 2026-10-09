@@ -40,6 +40,9 @@ testem.log
 __screenshots__/
 
 # System files
+.wrangler/
+.dev.vars
+.dev.vars.*
 .DS_Store
 Thumbs.db
 
