@@ -1,1 +1,89 @@
-﻿:host{display:flex;flex-direction:column;min-height:100vh}.header{height:85px;background:#fff;border-bottom:1px solid #e3e9e2}.nav-container{max-width:1220px;padding:0 35px;margin:auto;height:100%;display:flex;justify-content:space-between;align-items:center}.brand{display:flex;align-items:center;text-decoration:none;font-size:25px;letter-spacing:-1px;font-weight:700;color:#263c30;gap:0}.brand .brand-icon{margin-right:10px}.brand>span:not(.brand-icon){color:#3e855e}.brand-dot{font-size:32px}nav{display:flex;align-items:center;gap:28px}nav>a{text-decoration:none;font-size:13px;color:#65766a}nav>a.active{color:#287551;font-weight:700}main{width:100%;flex:1;padding-bottom:60px}.footer{border-top:1px solid #e0e6dc;font-size:11px;color:#8d9a90;padding:25px 0}.footer>.container{display:flex;justify-content:space-between}@media(max-width:650px){.header{height:auto;min-height:78px}.nav-container{padding:20px 18px;align-items:flex-start;gap:20px;flex-wrap:wrap}.brand{font-size:22px}nav{gap:15px}.footer>.container{gap:15px;flex-direction:column}}
+﻿:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.header {
+  height: 85px;
+  background: #fff;
+  border-bottom: 1px solid #e3e9e2;
+}
+.nav-container {
+  max-width: 1220px;
+  padding: 0 35px;
+  margin: auto;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  font-size: 25px;
+  letter-spacing: -1px;
+  font-weight: 700;
+  color: #263c30;
+  gap: 0;
+}
+.brand .brand-icon {
+  margin-right: 10px;
+}
+.brand > span:not(.brand-icon) {
+  color: #3e855e;
+}
+.brand-dot {
+  font-size: 32px;
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+nav > a {
+  text-decoration: none;
+  font-size: 13px;
+  color: #65766a;
+}
+nav > a.active {
+  color: #287551;
+  font-weight: 700;
+}
+main {
+  width: 100%;
+  flex: 1;
+  padding-bottom: 60px;
+}
+.footer {
+  border-top: 1px solid #e0e6dc;
+  font-size: 11px;
+  color: #8d9a90;
+  padding: 25px 0;
+}
+.footer > .container {
+  display: flex;
+  justify-content: space-between;
+}
+@media (max-width: 650px) {
+  .header {
+    height: auto;
+    min-height: 78px;
+  }
+  .nav-container {
+    padding: 20px 18px;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .brand {
+    font-size: 22px;
+  }
+  nav {
+    gap: 15px;
+  }
+  .footer > .container {
+    gap: 15px;
+    flex-direction: column;
+  }
+}
