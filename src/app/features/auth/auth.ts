@@ -13,6 +13,7 @@ export class Auth implements OnInit {
   async ngOnInit() {
     try {
       const error = this.route.snapshot.queryParamMap.get('erro');
+      if (error) this.api.jwt.clearProof();
       if (error) this.message.set(error === 'migracao'
         ? 'Esta conta foi criada com outro método. Solicite a vinculação segura ao Google para preservar seus documentos.'
         : 'Não foi possível entrar com Google. Tente novamente.');
